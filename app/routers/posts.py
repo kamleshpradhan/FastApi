@@ -1,5 +1,7 @@
+from re import search
+from threading import currentThread
 from .. import schemas
-from typing import List
+from typing import List, Optional
 from fastapi import Depends,status,Response,HTTPException,APIRouter
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -15,9 +17,13 @@ router = APIRouter(
 )
 
 @router.get("/",response_model=List[schemas.PostResponse])
-def get_posts(db:Session = Depends(get_db)):
+def get_posts(db:Session = Depends(get_db),current_user:int = Depends(oauth2.get_current_user),limit:int=10,skip:int=0,search:Optional[str] = ""):
 # fetching data using sqlalchmeny and orm
-    all_posts = db.query(models.Post).all()
+    # all_posts = db.query(models.Post).filter(models.Post.owner_id==current_user.id).limit(limit).offset(skip).all()
+    all_posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    results = db.query(models.Post).all()
+    print(results)
     return all_posts
 
 
@@ -29,10 +35,9 @@ def get_posts(db:Session = Depends(get_db)):
 
 
 @router.post("/",status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
-def create_post(post:schemas.PostCreate,db:Session = Depends(get_db),user_id:int = Depends(oauth2.get_current_user)):
+def create_post(post:schemas.PostCreate,db:Session = Depends(get_db),current_user:int = Depends(oauth2.get_current_user)):
     # new_post = models.Post(title=post.title,content=post.content,published=post.published)
-    print(user_id)
-    new_post = models.Post(**post.dict())
+    new_post = models.Post(**post.dict(),owner_id=current_user.id)
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
@@ -75,7 +80,7 @@ def get_post(id:int,response:Response,db:Session = Depends(get_db)):
 #             return i
 
 @router.delete("/{id}",status_code = status.HTTP_204_NO_CONTENT)
-def delete_post(id:int,db:Session =Depends(get_db)):
+def delete_post(id:int,db:Session =Depends(get_db),current_user:int = Depends(oauth2.get_current_user)):
     del_post = db.query(models.Post).filter(models.Post.id==id)
 
     # Normal sql code to delete a post
@@ -91,6 +96,10 @@ def delete_post(id:int,db:Session =Depends(get_db)):
     # return Response(status_code = status.HTTP_204_NO_CONTENT)
     if not del_post.first():
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,detail=f"Post with id {id} dose not exsist")
+
+    if del_post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No Authorised to perform requested action")
+
     del_post.delete(synchronize_session = False)
     db.commit()
     return Response(status_code = status.HTTP_204_NO_CONTENT)
@@ -98,7 +107,7 @@ def delete_post(id:int,db:Session =Depends(get_db)):
 
 
 @router.put("/{id}",status_code = status.HTTP_202_ACCEPTED,response_model = schemas.PostResponse)
-def update_post(id:int,updated_post:schemas.PostUpdate,db:Session = Depends(get_db)):
+def update_post(id:int,updated_post:schemas.PostUpdate,db:Session = Depends(get_db),current_user:int = Depends(oauth2.get_current_user)):
 
     post_query = db.query(models.Post).filter(models.Post.id == id)
     up_post = post_query.first()
@@ -115,6 +124,9 @@ def update_post(id:int,updated_post:schemas.PostUpdate,db:Session = Depends(get_
     # posts[index] = post_dict
     if not up_post:
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,detail=f"Post with id {id} dose not exsist")
+
+    if up_post.owner_id != current_user.id:
+        raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail="Unauthorized")
     post_query.update(updated_post.dict(),synchronize_session=False)
     db.commit()
     return up_post;

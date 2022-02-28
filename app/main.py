@@ -1,14 +1,13 @@
 from lib2to3.pgen2.token import OP
 from typing import Optional
 from fastapi import FastAPI,Response,status,HTTPException,Depends
-from pydantic import BaseModel
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel, BaseSettings
 from . import models,schemas,utils
 from sqlalchemy.orm import Session
 from .database import engine,get_db
-from .routers import posts,users,auth
-import time
+from .routers import posts,users,auth,vote
+# from .config import settings
+
 
 app = FastAPI()
 
@@ -44,21 +43,13 @@ models.Base.metadata.create_all(bind=engine)
 
 
 
-while True:
-    try:
-        conn = psycopg2.connect(host="localhost",database="fastApi",user="postgres",password=123456789 ,cursor_factory=RealDictCursor)
-        cursor = conn.cursor()
-        print("Database connection was successfull")
-        break
-    except Exception as error:
-        print("Connecting to databse failed")
-        print(error)
-        time.sleep(2)
+
 
 # app.include_router(posts.router)
 app.include_router(users.router)
 app.include_router(posts.router)
 app.include_router(auth.router)
+app.include_router(vote.router)
 @app.get("/")
 def read_root():
     return{"message":"Hello World"}
