@@ -4,6 +4,7 @@ from .. import schemas
 from typing import List, Optional
 from fastapi import Depends,status,Response,HTTPException,APIRouter
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ..database import get_db
 from .. import models,schemas,oauth2
 
@@ -16,15 +17,17 @@ router = APIRouter(
     tags = ['Posts']
 )
 
-@router.get("/",response_model=List[schemas.PostResponse])
+
+# response_model=List[schemas.PostResponse]
+@router.get("/",response_model =List[schemas.PostOut])
 def get_posts(db:Session = Depends(get_db),current_user:int = Depends(oauth2.get_current_user),limit:int=10,skip:int=0,search:Optional[str] = ""):
 # fetching data using sqlalchmeny and orm
     # all_posts = db.query(models.Post).filter(models.Post.owner_id==current_user.id).limit(limit).offset(skip).all()
-    all_posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    # all_posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
 
-    results = db.query(models.Post).all()
-    print(results)
-    return all_posts
+    results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote,models.Vote.post_id == models.Post.id,isouter = True).group_by(models.Post.id).all()
+    # print(results)
+    return results
 
 
     # Normal way to fetch all posts using postgres commands
@@ -56,7 +59,9 @@ def create_post(post:schemas.PostCreate,db:Session = Depends(get_db),current_use
 #             return(j)
             
 
-@router.get("/{id}",status_code = status.HTTP_200_OK,response_model=schemas.PostResponse)
+
+# response_model=schemas.PostResponse
+@router.get("/{id}",status_code = status.HTTP_200_OK,response_model=schemas.PostOut)
 def get_post(id:int,response:Response,db:Session = Depends(get_db)):
     # post_id = getPost(id)
 
@@ -65,8 +70,8 @@ def get_post(id:int,response:Response,db:Session = Depends(get_db)):
     # post_id = cursor.fetchone()
     # conn.commit()
 
-    post_id = db.query(models.Post).filter(models.Post.id == id).first()
-
+    # post_id = db.query(models.Post).filter(models.Post.id == id).first()
+    post_id = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote,models.Vote.post_id == models.Post.id,isouter = True).group_by(models.Post.id).filter(models.Post.id == id).first()
     if not post_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} not found.")
     #    response.status_code = status.HTTP_404_NOT_FOUND

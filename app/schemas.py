@@ -22,7 +22,6 @@ class PostUpdate(PostBase):
 
 
 
-
 class UserCreate(BaseModel):
     email:EmailStr
     password:str
@@ -37,6 +36,9 @@ class UserOut(BaseModel):
 class PostResponse(PostBase):
     id:int
     created_at:datetime
+    content:str
+    title:str
+    published:bool
     owner_id:int
     owner:UserOut
 
@@ -61,3 +63,11 @@ class TokenData(BaseModel):
 class Vote(BaseModel):
     post_id:int
     dir: conint(le=1)
+
+
+class PostOut(BaseModel):
+    Post: PostResponse
+    votes: int
+
+    class Config:
+        orm_mode = True

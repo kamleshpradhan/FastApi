@@ -6,11 +6,23 @@ from . import models,schemas,utils
 from sqlalchemy.orm import Session
 from .database import engine,get_db
 from .routers import posts,users,auth,vote
+from fastapi.middleware.cors import CORSMiddleware
 # from .config import settings
 
 
 app = FastAPI()
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# To create all the tables when the app starts up
 models.Base.metadata.create_all(bind=engine)
 
 
