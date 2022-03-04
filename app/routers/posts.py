@@ -62,7 +62,7 @@ def create_post(post:schemas.PostCreate,db:Session = Depends(get_db),current_use
 
 # response_model=schemas.PostResponse
 @router.get("/{id}",status_code = status.HTTP_200_OK,response_model=schemas.PostOut)
-def get_post(id:int,response:Response,db:Session = Depends(get_db)):
+def get_post(id:int,response:Response,db:Session = Depends(get_db),current_user:int = Depends(oauth2.get_current_user)):
     # post_id = getPost(id)
 
     # normal way to write in sql
@@ -102,7 +102,7 @@ def delete_post(id:int,db:Session =Depends(get_db),current_user:int = Depends(oa
     if not del_post.first():
         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,detail=f"Post with id {id} dose not exsist")
 
-    if del_post.owner_id != current_user.id:
+    if del_post.first().owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No Authorised to perform requested action")
 
     del_post.delete(synchronize_session = False)
