@@ -1,6 +1,5 @@
 from asyncio.proactor_events import _ProactorDuplexPipeTransport
 from fastapi.testclient import TestClient
-import py
 from app.main import app
 from app import schemas,models
 from app.config import settings
