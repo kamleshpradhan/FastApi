@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: pulling git repo
         uses: actions/checkout@v2
-      - name: say hi to sanjeev
-        run: echo "hello sanjeev"
+      - name: set up python version 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-versopm: 3.9
+        run: python --version
       
