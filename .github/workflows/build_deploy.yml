@@ -20,7 +20,11 @@ jobs:
       - name: set up python version 3.9
         uses: actions/setup-python@v2
         with:
-          python-versopm: 3.9
+          python-versopm: "3.9"
+      - name: update pip
+        run: python -m pip install --upgrade pip
+      - name: install dependencies
+        run: pip install -r requirements.txt
       - name: run python
         run: python --version
       
